@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>SONGHO CHAMPIONSHIP - NETWORK ELITE</title>
+    <style>
+        :root { --neon-green: #00ff9d; --neon-red: #ff3366; --neon-gold: #ffb700; --bg-dark: #060609; }
+        body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg-dark); color: #fff; margin: 0; padding: 20px; text-align: center; }
+        .game-container { display: flex; flex-direction: column; align-items: center; max-width: 900px; margin: 0 auto; }
+        h1 { font-size: 2.3rem; text-transform: uppercase; color: var(--neon-green); letter-spacing: 4px; margin: 0; text-shadow: 0 0 15px var(--neon-green); }
+        .subtitle { color: #666; font-size: 0.9rem; margin-bottom: 20px; letter-spacing: 1px; }
+        .network-bar { background: #11111e; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #222; display: flex; gap: 15px; align-items: center; justify-content: center; width: 100%; box-sizing: border-box; }
+        select { background: #060609; color: var(--neon-green); border: 1px solid var(--neon-green); padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .live-ticker { width: 100%; background: #11111e; border-left: 4px solid var(--neon-gold); padding: 12px; margin-bottom: 15px; border-radius: 4px; font-weight: bold; min-height: 24px; color: var(--neon-gold); text-align: left; box-sizing: border-box; }
+        .score-board { display: flex; justify-content: space-between; width: 100%; margin-bottom: 20px; gap: 20px; }
+        .card { flex: 1; background: #0f0f1a; border: 1px solid #222; padding: 15px; border-radius: 12px; text-align: left; transition: all 0.3s; }
+        .card.active { border-color: var(--neon-green); box-shadow: 0 0 15px rgba(0,255,157,0.15); }
+        .card h2 { margin: 0 0 5px 0; font-size: 0.9rem; color: #888; text-transform: uppercase; }
+        .score-val { font-size: 2.3rem; font-weight: 900; }
+        .board { background: linear-gradient(145deg, #1f120c, #2e1a11); padding: 35px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.7); border: 4px solid #3d2316; width: 100%; box-sizing: border-box; }
+        .row { display: flex; justify-content: space-around; margin: 15px 0; }
+        
+        /* Styles de base des cases */
+        .case { width: 85px; height: 85px; background: #e3d5ca; border-radius: 50%; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #2e1a11; font-weight: 900; font-size: 1.6rem; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border: 4px solid #b5a093; box-shadow: inset 0 6px 12px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.4); position: relative; }
+        .case:hover { transform: scale(1.1) translateY(-4px); background: #fff; border-color: var(--neon-green); box-shadow: 0 0 20px var(--neon-green); }
+        .case.disabled { cursor: not-allowed; pointer-events: none; opacity: 0.25; filter: grayscale(90%); }
+        
+        /* États visuels dynamiques (Suivi des flux) */
+        .case.ai-hint { border-color: var(--neon-gold) !important; background: #fffde6 !important; box-shadow: 0 0 25px var(--neon-gold) !important; animation: pulse 0.7s infinite alternate; }
+        .case.source-pit { border-color: var(--neon-red) !important; background: #ffebef !important; box-shadow: 0 0 25px var(--neon-red) !important; animation: pulse-src 0.4s infinite alternate; }
+        .case.distribution-path { border-color: var(--neon-green) !important; background: #e6fff4 !important; box-shadow: 0 0 20px var(--neon-green) !important; transform: scale(1.05); }
+        
+        @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.06); } }
+        @keyframes pulse-src { from { transform: scale(1); } to { transform: scale(1.04); } }
+        
+        .label { font-size: 0.7rem; color: #7f6a5f; font-weight: bold; margin-top: 4px; }
+        .controls { margin-top: 30px; display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; }
+        button { background: transparent; border: 2px solid var(--neon-green); color: var(--neon-green); padding: 14px 24px; font-weight: bold; border-radius: 8px; cursor: pointer; text-transform: uppercase; transition: all 0.2s; font-size: 0.85rem; letter-spacing: 1px; }
+        button:hover { background: var(--neon-green); color: #000; box-shadow: 0 0 15px var(--neon-green); }
+        .btn-ai { border-color: var(--neon-gold); color: var(--neon-gold); }
+        .btn-ai:hover { background: var(--neon-gold); color: #000; box-shadow: 0 0 15px var(--neon-gold); }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <h1>Songo Matrix <span style="font-size:1.1rem; color:var(--neon-gold);">[AJAX CLOUD]</span></h1>
+        <div class="subtitle">Suivi en direct des mouvements et redistribution de l'adversaire</div>
+
+        <div class="network-bar">
+            <label style="font-weight: bold; color: #888; margin-right: 10px;">Poste de jeu connecté :</label>
+            <select id="role-select" onchange="changeRole()">
+                <option value="SPECTATEUR">Console Spectateur (Écran Géant)</option>
+                <option value="SUD">Terminal Affecté Joueur SUD</option>
+                <option value="NORD">Terminal Affecté Joueur NORD</option>
+            </select>
+        </div>
+
+        <div class="live-ticker" id="ticker">Connexion...</div>
+
+        <div class="score-board">
+            <div class="card" id="card-NORD">
+                <h2>Joueur NORD</h2>
+                <div class="score-val" id="score-nord">0 <span style="font-size:1rem; color:#444;">/ 40</span></div>
+            </div>
+            <div class="card active" id="card-SUD">
+                <h2>Joueur SUD</h2>
+                <div class="score-val" id="score-sud">0 <span style="font-size:1rem; color:#444;">/ 40</span></div>
+            </div>
+        </div>
+
+        <div class="board">
+            <div class="row" id="row-nord"></div>
+            <div class="row" id="row-sud"></div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-ai" onclick="triggerSageHint()">💡 Consulter le Sage Ékang</button>
+            <button onclick="resetServerGame()">Réinitialiser la Partie</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:4000";
+        let myRole = "SPECTATEUR";
+        let localMoveCounter = -1;
+        let activeBoardState = Array(14).fill(5);
+        let currentActivePlayer = "SUD";
+        let localScoreSud = 0;
+        let localScoreNord = 0;
+        let audioCtx = null;
+        let isAnimating = false; 
+
+        function changeRole() { myRole = document.getElementById('role-select').value; syncState(); }
+        function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+        
+        function playSound(type) {
+            try {
+                initAudio(); if (!audioCtx) return;
+                const osc = audioCtx.createOscillator(); const gainNode = audioCtx.createGain();
+                osc.connect(gainNode); gainNode.connect(audioCtx.destination); const now = audioCtx.currentTime;
+                if (type === 'pickup') {
+                    osc.type = 'triangle'; osc.frequency.setValueAtTime(160, now); osc.frequency.exponentialRampToValueAtTime(340, now + 0.06);
+                    gainNode.gain.setValueAtTime(0.3, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1); osc.start(now); osc.stop(now + 0.1);
+                } else if (type === 'capture') {
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(300, now); osc.frequency.setValueAtTime(480, now + 0.08); osc.frequency.setValueAtTime(700, now + 0.2);
+                    gainNode.gain.setValueAtTime(0.3, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.4); osc.start(now); osc.stop(now + 0.4);
+                }
+            } catch (e) {}
+        }
+
+        function speak(text) {
+            if ('speechSynthesis' in window && text.trim() !== "") {
+                window.speechSynthesis.cancel();
+                let u = new SpeechSynthesisUtterance(text); u.lang = 'fr-FR'; u.rate = 1.1; window.speechSynthesis.speak(u);
+            }
+        }
+
+        function renderUI(board, activePlayer) {
+            const rNord = document.getElementById('row-nord'); rNord.innerHTML = '';
+            for (let i = 7; i <= 13; i++) {
+                const c = document.createElement('div');
+                let isDisabled = isAnimating || !(activePlayer === "NORD" && myRole === "NORD") || board[i] === 0;
+                c.className = `case ${isDisabled ? 'disabled' : ''}`; c.id = `case-${i}`;
+                c.innerHTML = `${board[i]}<div class="label">N${i-6}</div>`;
+                c.onclick = () => sendMove(i); rNord.appendChild(c);
+            }
+
+            const rSud = document.getElementById('row-sud'); rSud.innerHTML = '';
+            for (let i = 6; i >= 0; i--) {
+                const c = document.createElement('div');
+                let isDisabled = isAnimating || !(activePlayer === "SUD" && myRole === "SUD") || board[i] === 0;
+                c.className = `case ${isDisabled ? 'disabled' : ''}`; c.id = `case-${i}`;
+                c.innerHTML = `${board[i]}<div class="label">S${i+1}</div>`;
+                c.onclick = () => sendMove(i); rSud.appendChild(c);
+            }
+        }
+
+        // C'EST CETTE FONCTION QUI FAIT L'ANIMATION PAS-À-PAS DU COUP DE L'ADVERSAIRE
+        async function animateDistribution(fromIdx, serverData) {
+            isAnimating = true;
+            let tempBoard = [...activeBoardState];
+            let seedsToDistribute = tempBoard[fromIdx];
+
+            if (seedsToDistribute === 0) {
+                applyFinalState(serverData);
+                isAnimating = false;
+                return;
+            }
+
+            // 1. On montre d'où l'adversaire a pris les pions en vidant la case et en l'allumant en ROUGE
+            tempBoard[fromIdx] = 0;
+            renderUI(tempBoard, currentActivePlayer);
+            document.getElementById(`case-${fromIdx}`)?.classList.add('source-pit');
+            
+            let currentIdx = fromIdx;
+            await new Promise(r => setTimeout(r, 450)); // Pause visuelle de départ
+
+            // 2. On distribue les pions un par un en les allumant en VERT avec un bruitage sonore
+            while (seedsToDistribute > 0) {
+                currentIdx = (currentIdx + 1) % 14;
+                if (currentIdx !== fromIdx) {
+                    tempBoard[currentIdx]++;
+                    seedsToDistribute--;
+                    
+                    playSound('pickup');
+                    renderUI(tempBoard, currentActivePlayer);
+                    
+                    // On maintient les surbrillances pendant le sillage
+                    document.getElementById(`case-${fromIdx}`)?.classList.add('source-pit');
+                    document.getElementById(`case-${currentIdx}`)?.classList.add('distribution-path');
+                    
+                    await new Promise(r => setTimeout(r, 250)); // Vitesse de distribution (250ms)
+                }
+            }
+
+            await new Promise(r => setTimeout(r, 350)); 
+            
+            // Émettre le son de capture si les scores changent
+            if (serverData.scoreSud > localScoreSud || serverData.scoreNord > localScoreNord) {
+                playSound('capture');
+            }
+
+            applyFinalState(serverData);
+            isAnimating = false;
+        }
+
+        function applyFinalState(data) {
+            activeBoardState = data.board;
+            currentActivePlayer = data.currentPlayer;
+            localScoreSud = data.scoreSud;
+            localScoreNord = data.scoreNord;
+
+            document.getElementById('ticker').innerText = data.tickerMessage;
+            document.getElementById('score-sud').innerHTML = `${data.scoreSud} <span style="font-size:1rem; color:#444;">/ 40</span>`;
+            document.getElementById('score-nord').innerHTML = `${data.scoreNord} <span style="font-size:1rem; color:#444;">/ 40</span>`;
+            document.getElementById('card-SUD').className = `card ${data.currentPlayer === 'SUD' ? 'active' : ''}`;
+            document.getElementById('card-NORD').className = `card ${data.currentPlayer === 'NORD' ? 'active' : ''}`;
+            
+            renderUI(activeBoardState, currentActivePlayer);
+        }
+
+        async function syncState() {
+            if (isAnimating) return; 
+            try {
+                const res = await fetch(`${API_URL}/state`);
+                const data = await res.json();
+
+                if (data.moveCounter > localMoveCounter) {
+                    if (localMoveCounter === -1) {
+                        localMoveCounter = data.moveCounter;
+                        applyFinalState(data);
+                    } else {
+                        localMoveCounter = data.moveCounter;
+                        if (data.lastMoveFrom !== undefined && data.lastMoveFrom !== null) {
+                            speak(data.speakMessage);
+                            await animateDistribution(data.lastMoveFrom, data);
+                        } else {
+                            applyFinalState(data);
+                        }
+                    }
+                } else {
+                    applyFinalState(data);
+                }
+            } catch (e) {
+                document.getElementById('ticker').innerText = "❌ Coupure de liaison avec le serveur central.";
+            }
+        }
+
+        async function sendMove(idx) {
+            if (isAnimating) return;
+            initAudio();
+            const res = await fetch(`${API_URL}/move`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ index: idx, player: myRole })
+            });
+            if (res.status === 400) { const err = await res.json(); alert(err.error); }
+            syncState();
+        }
+
+        function triggerSageHint() {
+            initAudio();
+            if (!activeBoardState || activeBoardState.length === 0 || isAnimating) return;
+            
+            let start = (currentActivePlayer === "SUD") ? 0 : 7;
+            let end = (currentActivePlayer === "SUD") ? 6 : 13;
+            
+            let validMoves = [];
+            for (let i = start; i <= end; i++) { if (activeBoardState[i] > 0) validMoves.push(i); }
+            if (validMoves.length === 0) return;
+            
+            let bestMove = validMoves[0];
+            let bestNetGain = -999;
+            
+            validMoves.forEach(idx => {
+                let simSelf = simulateLocalMove(idx, currentActivePlayer, activeBoardState);
+                let opponent = (currentActivePlayer === "SUD") ? "NORD" : "SUD";
+                let oppStart = (opponent === "SUD") ? 0 : 7;
+                let oppEnd = (opponent === "SUD") ? 6 : 13;
+                
+                let maxOppCounter = 0;
+                for (let n = oppStart; n <= oppEnd; n++) {
+                    if (simSelf.nextBoard[n] > 0) {
+                        let simOpp = simulateLocalMove(n, opponent, simSelf.nextBoard);
+                        if (simOpp.pts > maxOppCounter) maxOppCounter = simOpp.pts;
+                    }
+                }
+                
+                let netGain = simSelf.pts - maxOppCounter;
+                if (netGain > bestNetGain) { bestNetGain = netGain; bestMove = idx; }
+            });
+            
+            if (bestMove !== -1) {
+                const targetCase = document.getElementById(`case-${bestMove}`);
+                if (targetCase) {
+                    targetCase.classList.add('ai-hint');
+                    let displayLabel = (currentActivePlayer === "SUD") ? `S${bestMove + 1}` : `N${bestMove - 6}`;
+                    document.getElementById('ticker').innerText = `🔮 Le Sage conseille la case ${displayLabel}.`;
+                    speak(`Le Sage conseille ${displayLabel}`);
+                    setTimeout(() => targetCase.classList.remove('ai-hint'), 2000);
+                }
+            }
+        }
+
+        function simulateLocalMove(index, player, currentBoard) {
+            let bClone = [...currentBoard];
+            let seeds = bClone[index]; bClone[index] = 0;
+            let curr = index;
+            while (seeds > 0) { curr = (curr + 1) % 14; if (curr !== index) { bClone[curr]++; seeds--; } }
+            let min = (player === "NORD") ? 0 : 7;
+            let max = (player === "NORD") ? 6 : 13;
+            let pts = 0;
+            if (curr >= min && curr <= max) {
+                let c = curr; let captured = 0; let cells = [];
+                while (c >= min && c <= max) {
+                    if (bClone[c] >= 2 && bClone[c] <= 4) { captured += bClone[c]; cells.push(c); c--; } else break;
+                }
+                let totalEnemy = 0; for (let i = min; i <= max; i++) totalEnemy += bClone[i];
+                if (captured !== totalEnemy || totalEnemy === 0) { cells.forEach(i => bClone[i] = 0); pts = captured; }
+            }
+            return { pts: pts, nextBoard: bClone };
+        }
+
+        async function resetServerGame() { initAudio(); await fetch(`${API_URL}/reset`, { method: 'POST' }); syncState(); }
+
+        setInterval(syncState, 1000); // Polling réseau d'une seconde
+        syncState();
+    </script>
+</body>
+</html>
