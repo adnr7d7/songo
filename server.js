@@ -120,9 +120,11 @@ app.post('/move', (req, res) => {
 
     res.json(gameState);
 });
+const PORT = process.env.PORT || 4000;
 
-app.listen(4000, () => {
+app.listen(PORT, () => {
+
     console.log("=================================================");
-    console.log("🚀 BACKEND SONGO ACTIF SUR LE PORT : 4000");
+    console.log(`🚀 BACKEND SONGHO ACTIF SUR LE PORT : ${PORT}`);
     console.log("=================================================");
 });
